@@ -1,0 +1,265 @@
+{
+  "name": "Contact Form Lead Follow-up",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "contact-form-lead",
+        "options": {}
+      },
+      "id": "27c76063-bb3c-4e8c-a31d-fe6fb3d1f8aa",
+      "name": "Contact Form Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Form Responses 1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ ($json.body.name || $json.body.Name) }}",
+            "Email": "={{ ($json.body.email || $json.body.Email) }}",
+            "Message": "={{ ($json.body.message || $json.body.Message) }}",
+            "Timestamp": "={{ $now.toFormat(\"M/d/yyyy H:mm:ss\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "26fc4bae-f435-40b6-8a87-aa4a45461782",
+      "name": "Save Lead to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Lead name: {{ ($(\"Contact Form Webhook\").item.json.body.name || $(\"Contact Form Webhook\").item.json.body.Name) }}\nLead message: {{ ($(\"Contact Form Webhook\").item.json.body.message || $(\"Contact Form Webhook\").item.json.body.Message) }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You write short, warm, professional follow-up emails for a small business. Reply with the email body only, plain text, 80-120 words, no subject line. Acknowledge the specific points in the lead message, say we will reply in detail within one business day, and sign off as \"The Team\"."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "5045be5d-7343-4b8f-9b2d-bac796e1d8b8",
+      "name": "Write Follow-up Email",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": "nvidia/nemotron-3.5-lightning:free",
+        "options": {
+          "reasoningEffort": "minimal",
+          "maxTokens": 3000
+        }
+      },
+      "id": "d4fd29d0-8882-4b64-9e73-254bdf9b5188",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        448,
+        240
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ ($(\"Contact Form Webhook\").item.json.body.email || $(\"Contact Form Webhook\").item.json.body.Email) }}",
+        "subject": "=Thanks for contacting us, {{ ($(\"Contact Form Webhook\").item.json.body.name || $(\"Contact Form Webhook\").item.json.body.Name) }}",
+        "emailType": "text",
+        "message": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "e94b5e5f-c1b6-4f43-a9f8-bd419a22a769",
+      "name": "Send Follow-up Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=New lead\nName: {{ ($(\"Contact Form Webhook\").item.json.body.name || $(\"Contact Form Webhook\").item.json.body.Name) }}\nEmail: {{ ($(\"Contact Form Webhook\").item.json.body.email || $(\"Contact Form Webhook\").item.json.body.Email) }}\nMessage: {{ ($(\"Contact Form Webhook\").item.json.body.message || $(\"Contact Form Webhook\").item.json.body.Message) }}\n\nFollow-up email sent.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d3f0d5d2-105b-43fa-968e-2e893360aec0",
+      "name": "Notify on Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        0
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Contact Form Webhook": {
+      "main": [
+        [
+          {
+            "node": "Save Lead to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Lead to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Write Follow-up Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Follow-up Email": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write Follow-up Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Follow-up Email": {
+      "main": [
+        [
+          {
+            "node": "Notify on Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {}
+}
